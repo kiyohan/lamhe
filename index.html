@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app">
+    <div class="header">
+        <h2>Upload Image</h2>
+    </div>
+       <div class="input-div">
+        <p>Drag & Drop images here or<span class="browse">Browse</span></p>
+        <input type="file" class="file" multiple="multiple" accept="image/png,image/jpeg,img/jpg">
+       </div>
+   
+   <form id="saved-form">
+    <div class="header">
+        <h3>Saved in server</h3>
+        <button type="submit">Delete</button>
+    </div>
+    <div class="saved-div"></div>
+   </form>
+   <form id="queued-form">
+    <div class="header">
+        <h3>Queued In front</h3>
+        <button type="submit">Submit</button>
+    </div>
+    <div class="queued-div"></div>
+   </form>
+  </main>
+  <div class="image">
+    <span onclick="deleteQueuedImage()"></span>
+  </div>
+  <div class="image">
+    <span onclick="selectImagesFromUploaded()"></span>
+  </div>
+  <script>
+    let queuedImagesArray=[];
+    saveForm=document.querySelector("#saved-form"),
+    queuedForm=document.querySelector("#queued-form"),
+    savedDiv=document.querySelector(".saved-div"),
+    queuedDiv=document.querySelector(".queued-div"),
+    inputDiv=document.querySelector(".input-div"),
+    input=document.querySelector(".input-div input"),
+    serverMessage=document.querySelector(".server-message"),
+    deleteImages=[];
+    input.addEventListener("change",()=>{
+        const files = input.files
+        for(let  i=0;i<files.length;i++){
+            queuedImagesArray.push(files[i])
+        }
+        queuedForm.reset()
+        displayQueuedImages()
+    });
+    inputDiv.addEventListener("drop", (e) => {
+        e.preventDefault();
+        const files = e.dataTransfer.files;
+        for (let i = 0; i < files.length; i++) {
+            if (!files[i].type.match("image")) continue;
+            if (queuedImagesArray.every((image) => image.name !== files[i].name))
+                queuedImagesArray.push(files[i]);
+        }
+        displayQueuedImages();
+    });
+    function displayQueuedImages() {
+        let images = "";
+        queuedImagesArray.forEach((image, index) => {
+            images += `<div class="image">
+                <img src="${URL.createObjectURL(image)}" alt="image">
+                <span onclick="deleteQueuedImage(${index})">&times;</span>
+            </div>`;
+        });
+        queuedDiv.innerHTML = images; // Corrected innerHTML spelling
+    }
+    function selectImagesFromUploaded() {
+        const uploadedImages = document.querySelectorAll('.image img');
+        const selectedImages = [];
+        
+        uploadedImages.forEach(image => {
+            const isSelected = confirm(`Do you want to select this image?\n${image.src}`);
+            if (isSelected) {
+                selectedImages.push(image.src);
+            }
+        });
+        
+        // Process selected images (e.g., display, download, etc.)
+        console.log(selectedImages);
+    }
+    function deleteQueuedImage(index){
+        queuedImagesArray.splice(index,1)
+        displayQueuedImages()
+    }
+  </script>
+    
+</body>
+</html>
