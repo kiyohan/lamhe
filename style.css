@@ -175,56 +175,108 @@ button {
 }
 
 .saved-div,
-.queued-div {
-  width: 100%;
-  min-height: 150px;
-  display: flex;
-  justify-content: flex-start;
-  flex-wrap: wrap;
-  gap: 15px;
-  z-index: 2;
-  position: relative;
-  border-radius: 5px;
-  border: 2px dotted black;
-  background-color: white;
-}
-
-.saved-div .image,
-.queued-div .image {
-  height: 150px;
-  border-radius: 5px;
-  box-shadow: 0 0 5px rgba(0, 0, 0, 0.15);
-  overflow: hidden;
-  position: relative;
-}
-
-.saved-div .image:nth-child(4n),
-.queued-div .image:nth-child(4n) {
-  margin-right: 0;
-}
-
-.saved-div .image img,
-.queued-div .image img {
-  height: 100%;
-  width: 100%;
-}
-
-.saved-div .image span,
-.queued-div .image span {
-  position: absolute;
-  top: -4px;
-  right: 4px;
-  cursor: pointer;
-  font-size: 22px;
-  color: white;
-}
-
-.saved-div .image span:hover,
-.queued-div .image span:hover {
-  opacity: 0.8;
-}
-
-.saved-div .span--hidden,
-.queued-div .span--hidden {
-  visibility: hidden;
-}
+  .queued-div ,
+  .selected-images-div{
+    width: 100%;
+    min-height: 150px;
+    display: flex;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 15px;
+    position: relative;
+    border-radius: 5px;
+    border: 2px dotted black;
+    background-color: white;
+  }
+  
+  .saved-div .image,
+  .queued-div .image,
+  .selected-images-div .image {
+    height: 150px;
+    border-radius: 5px;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+    position: relative;
+  }
+  
+  .saved-div .image:nth-child(4n),
+  .queued-div .image:nth-child(4n) ,
+  .selected-images-div:nth-child(4n){
+    margin-right: 0;
+  }
+  
+  .saved-div .image img,
+  .queued-div .image img ,
+  .selected-images-div .image img{
+    height: 100%;
+    width: 100%;
+  }
+  
+  .saved-div .image span,
+  .queued-div .image span,
+  .selected-images-div  .image span{
+    position: absolute;
+    top: -4px;
+    right: 4px;
+    cursor: pointer;
+    font-size: 22px;
+    color: white;
+  }
+  
+  .saved-div .image span:hover,
+  .queued-div .image span:hover ,
+  .selected-images-div .image span:hover{
+    opacity: 0.8;
+  }
+  
+  .saved-div .span--hidden,
+  .queued-div .span--hidden,
+  .selected-images-div .span--hidden{
+    visibility: hidden;
+  }
+  .image {
+    position: relative;
+    display: inline-block;
+    margin-top: 10px;
+    margin-right: 10px;
+    margin-bottom: 10px;
+    margin-left: 10px;
+  }
+  
+  .index {
+    position: relative;
+    left: 5px;
+    margin-top: 10px;
+    width: 30px;
+    height: 30px; 
+    border-radius: 50%;
+    background-color:black;
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  .index:hover{
+    background-color:grey;
+  }
+  
+  .delete-icon {
+    position: relative;
+     right: 0;
+    top: 0;
+    margin-top: 10px;
+    height: 20px;
+    width: 20px;
+    border-radius: 50%;
+    background-color: red;
+    color: white;
+    padding: 5px;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  .delete-icon:hover{
+    background-color:grey;
+  }
+  
