@@ -303,6 +303,11 @@
             .create_vid:hover{
               color: white;
             }
+            .anonymus{
+              display: flex;
+              align-items: center;
+              justify-content: space-evenly;
+            }
            
     </style>
 </head>
@@ -352,8 +357,11 @@
             <div class="selected-images-div"></div>
             <br>
         </div>
-        <div style="display:flex;align-items:center;justify-content:space-evenly"><button  style="width:fit-content;"  onclick="clearSelectedImages()">Clear Selected Images</button>
-        <button class="create_vid"><a href="video.html">Create Video</a></button></div>
+        <div class="anonymus">
+        <div><button  class="create_vid" onclick="clearSelectedImages()">Clear Selected Images</button></div>
+        <div><button class="create_vid"><a href="video.html">Create Video</a></button></div>
+        <div><button class="create_vid"><a href="audio.html">Audio Library</a></button></div>
+      </div>
     </main>
     <script>
     let queuedImagesArray = [];

@@ -21,8 +21,8 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 # Database configuration
 db_config = {
     "host": "localhost",    
-    "user": "akmal",
-    "password": "Akmal18@",
+    "user": "rohan",
+    "password": "@0NKmF710",
     "db": "lamhe",
 }
 
