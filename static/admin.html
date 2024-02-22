@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -21,35 +22,24 @@
             <section>
                 <h1>Admin Portal</h1>
                 <div style="overflow-x:auto;">
-                    <table class="table">
+                    <table border="1">
                         <thead>
                             <tr>
-                                <th>Name</th>
+                                <th>User ID</th>
                                 <th>Username</th>
+                                <th>Name</th>
                                 <th>Email</th>
                             </tr>
                         </thead>
                         <tbody>
+                            {% for user in users %}
                             <tr>
-                                <td>Nitesh Kumawat</td>
-                                <td>Dattebayo</td>
-                                <td>uzumakinitesh@gmail.com</td>
+                                <td>{{ user.id }}</td>
+                                <td>{{ user.username }}</td>
+                                <td>{{ user.name }}</td>
+                                <td>{{ user.email }}</td>
                             </tr>
-                            <tr>
-                                <td>Rahul Singh</td>
-                                <td>Keyaruga</td>
-                                <td>dxd69@gmail.com</td>
-                            </tr>
-                            <tr>
-                                <td>Anish Gupta</td>
-                                <td>Issei Hyudo</td>
-                                <td>dxd@gmail.com</td>
-                            </tr>
-                            <tr>
-                                <td>Nityanand Swami</td>
-                                <td>ara ara</td>
-                                <td>Dong@gmail.com</td>
-                            </tr>
+                            {% endfor %}
                         </tbody>
                     </table>
                 </div>
@@ -61,5 +51,10 @@
             <a href="#">Privacy Policy</a> • <a href="#">Terms of Use</a>
         </small>
     </footer>
+    <script>
+        setTimeout(function(){
+            window.location.reload(1);}
+        , 2000);
+    </script>
 </body>
 </html>

@@ -4,7 +4,20 @@ body
     padding: 0;
     border: border-box;
     font-family: sans-serif;
-    background-color: navy;
+    background-color: rgb(47, 47, 71);
+}
+body 
+{
+    opacity: 0;
+    animation: fadeIn 1s ease-out forwards;
+}
+
+@keyframes fadeIn 
+{
+    to 
+    {
+        opacity: 1;
+    }
 }
 
 .login{
