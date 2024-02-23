@@ -291,6 +291,17 @@
             margin-bottom: 20px;
             align-items: center;
         }
+        #previewAudioList {
+            
+            max-width: 800px;
+            width: 100%;
+            padding: 20px;
+            border: 2px solid #ccc;
+            border-radius: 10px;
+            background-color: #f9f9f9;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
            
     </style>
 </head>
@@ -317,66 +328,98 @@
             <div><button onclick="uploadAudios()" >Upload</button></div>
            <div id="errorDisplay" class="error" style="display: none;"><p>Incorrect FileType or Audio alreday Uploaded</p></div>
     </div> 
-    <h2 style="text-align: center;">Preloaded Audio Library</h2>
-    <br>
-    <div class="preloaded">
-        
-        
-    <div id="preaudiolist" >
-        <h5>Lamhey . Anubha Bajaj</h5>
-        <br>
-        <audio controls>
-            <source src="Lamhey . Anubha Bajaj.mp3" type="audio/ogg">
-        </audio>
-    </div>
-    <div id="preaudiolist" >
-        <h5>Khwab.Iqlipse Nova</h5>
-        <br>
-        <audio controls>
-            <source src="khwab. Iqlipse Nova.mp3" type="audio/ogg">
-        </audio>
-    </div>
-    <div id="preaudiolist" >
-        <h5>Khaabon Ke Parinday</h5>
-        <br>
-        <audio controls>
-            <source src="Khaabon Ke Parinday.mp3" type="audio/ogg">
-        </audio>
-    </div>
-    <div id="preaudiolist" >
-        <h5>oo gujariya . Nikhil D</h5>
-        <br>
-        <audio controls>
-            <source src="oo gujariya . Nikhil D.mp3" type="audio/ogg">
-        </audio>
-    </div>
-    <div id="preaudiolist" >
-        <h5>Mera jo safar hai .Iqlipse Nova-</h5>
-        <br>
-        <audio controls>
-            <source src="Mera jo safar hai .Iqlipse Nova--hindi.mp3" type="audio/ogg">
-        </audio>
-    </div>
-      
-    </div>
-  
-           <div class="container">
-            <h2>Uploaded Audio Library</h2>
+        <div class="container">
+            <h2>Audio Library</h2>
         <br>
                 <div id="audioList"></div>
-                <button id="deleteAllButton" onclick="deleteAllAudios()">Delete All</button>
-            </div>
-        
- 
-    <script>
+            
+
+                <h2 style="text-align: center;">Selected Audio Files</h2>
+
     
-        let uploadedFiles = []; // Array to store uploaded filenames
+            <div id="previewAudioList">
+                <!-- Placeholder for selected audio files -->
+            </div>
+        </div>
+    <script>
+
+        let preuploadedFiles = [
+        { name: 'Lamhey . Anubha Bajaj.mp3' },
+        { name: 'Khaabon Ke Parinday.mp3' },
+        { name: 'oo gujariya . Nikhil D.mp3' }
+    ];
+    function displaySelectedAudio(fileName) {
+        const audioList = document.getElementById('previewAudioList');
+    
+        // Create the audio item div
+        const audioItem = document.createElement('div');
+        audioItem.classList.add('audioItem');
+    
+        // Create the audio element
+        const audio = document.createElement('audio');
+        audio.controls = true;
+        audio.src = fileName;
+    
+        // Create the delete button
+        const deleteButton = document.createElement('button');
+        deleteButton.textContent = 'Delete';
+        deleteButton.addEventListener('click', function() {
+            deleteAudio(audioItem, fileName);
+        });
+    
+        // Create the file name paragraph
+        const fileNamePara = document.createElement('p');
+        fileNamePara.textContent = fileName;
+    
+        // Append components to the audio item
+        audioItem.appendChild(fileNamePara);
+        audioItem.appendChild(audio);
+        audioItem.appendChild(deleteButton);
+    
+        // Append the audio item to the preview list
+        audioList.appendChild(audioItem);
+    }
+    
+    function preloaded() {
+        const audioList = document.getElementById('audioList');
+        preuploadedFiles.forEach(file => {
+            const audioItem = document.createElement('div');
+            audioItem.classList.add('audioItem');
+    
+            const audio = document.createElement('audio');
+            audio.controls = true;
+            audio.src = file.name; // Assuming the file name is the source
+   
+            // Create paragraph for file name
+            const fileNamePara = document.createElement('p');
+            fileNamePara.textContent = file.name;
+            fileNamePara.addEventListener('click', function () {
+                displaySelectedAudio(file.name);
+            });
+            
+            // Append file name paragraph
+            audioItem.appendChild(fileNamePara);
+            audioItem.appendChild(audio);
+            audioList.appendChild(audioItem);
+        });
+    }
+    
+
+    window.addEventListener('load', function() {
+        // Call your function here
+        preloaded();
+    });
+    
+        
+        
+         let uploadedFiles=[];
+        
+        // Array to store uploaded filenames
         function uploadAudios() {
     const fileInput = document.getElementById('audioFileInput');
     const audioList = document.getElementById('audioList');
     const errorDisplay = document.getElementById('errorDisplay');
     const files = fileInput.files;
-
     if (files.length > 0) {
         for (let i = 0; i < files.length; i++) {
             const file = files[i];
@@ -397,7 +440,9 @@
 
                     const fileNamePara = document.createElement('p'); // Create paragraph for file name
                     fileNamePara.textContent = file.name; // Set text content to file name
-
+                    fileNamePara.addEventListener('click', function () {
+                        displaySelectedAudio(file.name);
+                    });
                    // Append file name paragraph
                    audioItem.appendChild(fileNamePara); 
                     audioItem.appendChild(audio);
@@ -422,29 +467,8 @@
             audioItem.remove(); // Remove audio item from list
             uploadedFiles = uploadedFiles.filter(item => item !== fileName); // Remove filename from uploaded files list
         }
+    
 
-        function deleteAllAudios() {
-            const audioList = document.getElementById('audioList');
-            audioList.innerHTML = ''; // Clear the audio list
-            uploadedFiles = []; // Clear the uploaded files list
-        }
-        function searchAudios() {
-            const searchInput = document.getElementById('searchInput').value.toLowerCase();
-            const audioItems = document.querySelectorAll('.audioItem');
-        
-            audioItems.forEach(audioItem => {
-                const audio = audioItem.querySelector('audio');
-                const fileName = audio.src.split('/').pop(); // Extract filename from audio source
-        
-                if (fileName.toLowerCase().includes(searchInput)) {
-                    audioItem.style.display = 'block'; // Show audio item if filename matches search query
-                    audioItem.classList.add('highlight'); // Add highlight class to matched audio item
-                } else {
-                    audioItem.style.display = 'none'; // Hide audio item if filename does not match search query
-                    audioItem.classList.remove('highlight'); // Remove highlight class from unmatched audio item
-                }
-            });
-        }
         
         
     </script>
