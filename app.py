@@ -171,6 +171,21 @@ def login():
         username = request.form['Uname']
         password = request.form['Pass']
 
+        if username == 'admin' and password == 'admin':  # Check if it's the admin login
+            try:
+                connection = get_db_connection()
+                cursor = connection.cursor()
+
+                cursor.execute("SELECT id, username, name, email FROM users")
+                users = cursor.fetchall()
+
+                cursor.close()
+                connection.close()
+
+                return render_template('admin.html', users=users)
+
+            except Exception as e:
+                return f"An error occurred: {e}", 500
         try:
             connection = get_db_connection()
             cursor = connection.cursor()
@@ -189,7 +204,7 @@ def login():
                 return redirect('/home')
                 
 
-            return jsonify({'error': 'Invalid username or password'}), 401
+            return redirect('/fail')
 
         except Exception as e:
             return jsonify({'error': f"An error occurred: {e}"}), 500
