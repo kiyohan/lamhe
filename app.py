@@ -1,17 +1,20 @@
 # Import necessary modules
 import os
-from flask import Flask, request, render_template, redirect, send_from_directory,session,jsonify
+from flask import Flask, request, render_template, redirect, send_from_directory,session,jsonify,send_file,url_for
 import pymysql
 import pickle
+from io import BytesIO
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity
 
 # Initialize Flask app
 app = Flask(__name__, static_url_path='', static_folder='static', template_folder='static')
-
-app.secret_key = 'hello,world!'
-
+app.secret_key = 'Helloworld'
 UPLOAD_FOLDER = 'uploads'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['JWT_SECRET_KEY'] = '140-073-212'  # Change this to a random secret key
+
+jwt = JWTManager(app)
 
 
 
@@ -21,8 +24,8 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 # Database configuration
 db_config = {
     "host": "localhost",    
-    "user": "rohan",
-    "password": "@0NKmF710",
+    "user": "akmal",
+    "password": "Akmal18@",
     "db": "lamhe",
 }
 
@@ -119,27 +122,54 @@ def register():
         except Exception as e:
             return f"An error occurred: {e}", 500
 
+# @app.route('/login', methods=['POST'])
+# def login():
+#     if request.method == 'POST':
+#         username = request.form['Uname']
+#         password = request.form['Pass']
+
+#         if username == 'admin' and password == 'admin':  # Check if it's the admin login
+#             try:
+#                 connection = get_db_connection()
+#                 cursor = connection.cursor()
+
+#                 cursor.execute("SELECT id, username, name, email FROM users")
+#                 users = cursor.fetchall()
+
+#                 cursor.close()
+#                 connection.close()
+
+#                 return render_template('admin.html', users=users)
+
+#             except Exception as e:
+#                 return f"An error occurred: {e}", 500
+
+#         try:
+#             connection = get_db_connection()
+#             cursor = connection.cursor()
+
+#             cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
+#             user = cursor.fetchone()
+
+#             cursor.close()
+#             connection.close()
+
+#             if user and check_password_hash(user['password'], password):
+#                 # Store the username in the session
+#                 session['username'] = username
+#                 return redirect('/home')  # Redirect to the home page after successful login
+
+#             return redirect('/fail')  # Redirect to the login failure page
+
+#         except Exception as e:
+#             return f"An error occurred: {e}", 500
+        
+#using the jwt token
 @app.route('/login', methods=['POST'])
 def login():
     if request.method == 'POST':
         username = request.form['Uname']
         password = request.form['Pass']
-
-        if username == 'admin' and password == 'admin':  # Check if it's the admin login
-            try:
-                connection = get_db_connection()
-                cursor = connection.cursor()
-
-                cursor.execute("SELECT id, username, name, email FROM users")
-                users = cursor.fetchall()
-
-                cursor.close()
-                connection.close()
-
-                return render_template('admin.html', users=users)
-
-            except Exception as e:
-                return f"An error occurred: {e}", 500
 
         try:
             connection = get_db_connection()
@@ -152,14 +182,26 @@ def login():
             connection.close()
 
             if user and check_password_hash(user['password'], password):
-                # Store the username in the session
+                # Create access token containing user identity
+                access_token = create_access_token(identity=username)
+                print(access_token)
                 session['username'] = username
-                return redirect('/home')  # Redirect to the home page after successful login
+                return redirect('/home')
+                
 
-            return redirect('/fail')  # Redirect to the login failure page
+            return jsonify({'error': 'Invalid username or password'}), 401
 
         except Exception as e:
-            return f"An error occurred: {e}", 500
+            return jsonify({'error': f"An error occurred: {e}"}), 500
+
+@app.route('/protected')
+@jwt_required()  # Require a valid JWT token for accessing this route
+def protected():
+    # Access the identity of the current user with get_jwt_identity
+    current_user = get_jwt_identity()
+    return jsonify(logged_in_as=current_user), 200
+        
+
         
 @app.route('/home')
 def home():
@@ -183,7 +225,7 @@ def fail():
 def success():
     return send_from_directory('static', 'succes.html')
 
-@app.route('/logout', methods=['POST'])
+@app.route('/logout')
 def logout():
     # Clear the user session
     session.clear()
@@ -274,7 +316,24 @@ def get_uploaded_images():
 
 @app.route('/uploads/<path:filename>')
 def serve_image(filename):
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor()
+
+        # Retrieve image blob based on the filename
+        cursor.execute("SELECT img FROM image_details WHERE name = %s", (filename,))
+        image_data = cursor.fetchone()
+
+        cursor.close()
+        connection.close()
+
+        if image_data:
+            return send_file(BytesIO(image_data['img']), mimetype='image/jpeg')  # Adjust mimetype if needed
+        else:
+            return jsonify({'error': 'Image not found'}), 404
+
+    except Exception as e:
+        return jsonify({'error': f"An error occurred: {e}"}), 500
 
 
 # Function to check if a file is an image
