@@ -12,6 +12,16 @@
             font-family: 'Jost', sans-serif;
             background-color: whitesmoke;
           }
+          .bar {
+            position: fixed; /* Fix the navbar position */
+            top: 0;
+            width: 100%;
+            z-index: 9999; /* Set a high z-index to ensure it stays on top */
+          }
+          
+          .container {
+            padding-top: 100px; /* Add padding to the top of the container to prevent content from being hidden behind the fixed navbar */
+          }
           
           *{
             padding: 0;
@@ -158,10 +168,10 @@
           }
           .container {
             display: flex;
-           
             align-items: center;
             flex-direction: column;
-            height: 100vh;
+            height: fit-content;
+            margin-bottom: 20px;
         }
 
         /* Audio list styles */
@@ -253,7 +263,34 @@
         .highlight {
             background-color: yellow; 
         }
-        
+        #audioFileInput{
+            background-color: #0082e6;
+            padding: 10px 10px 10px 10px ;
+            font-size: 20px;
+            border-radius: 5px;
+            width: 100%;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .preloaded {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            height: fit-content;
+            justify-content: space-evenly;
+        }
+        h5{
+            text-align: center;
+        }
+        #preaudiolist {
+            width: 350px;
+            padding: 20px;
+            border: 2px solid #ccc;
+            border-radius: 10px;
+            background-color: #f9f9f9;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            align-items: center;
+        }
            
     </style>
 </head>
@@ -276,13 +313,56 @@
         <script src="https://kit.fontawesome.com/a076d05399.js"></script>
     </div>
      <div class="upload">
-        <div><button><label for="audioFileInput" class="customFileInput">Choose Audio Files</label></button>
-            <input type="file" id="audioFileInput" accept="audio/*" multiple style="display: none;"></div>
+            <div><input type="file" id="audioFileInput" accept="audio/*" multiple ></div>
             <div><button onclick="uploadAudios()" >Upload</button></div>
            <div id="errorDisplay" class="error" style="display: none;"><p>Incorrect FileType or Audio alreday Uploaded</p></div>
     </div> 
+    <h2 style="text-align: center;">Preloaded Audio Library</h2>
+    <br>
+    <div class="preloaded">
+        
+        
+    <div id="preaudiolist" >
+        <h5>Lamhey . Anubha Bajaj</h5>
+        <br>
+        <audio controls>
+            <source src="Lamhey . Anubha Bajaj.mp3" type="audio/ogg">
+        </audio>
+    </div>
+    <div id="preaudiolist" >
+        <h5>Khwab.Iqlipse Nova</h5>
+        <br>
+        <audio controls>
+            <source src="khwab. Iqlipse Nova.mp3" type="audio/ogg">
+        </audio>
+    </div>
+    <div id="preaudiolist" >
+        <h5>Khaabon Ke Parinday</h5>
+        <br>
+        <audio controls>
+            <source src="Khaabon Ke Parinday.mp3" type="audio/ogg">
+        </audio>
+    </div>
+    <div id="preaudiolist" >
+        <h5>oo gujariya . Nikhil D</h5>
+        <br>
+        <audio controls>
+            <source src="oo gujariya . Nikhil D.mp3" type="audio/ogg">
+        </audio>
+    </div>
+    <div id="preaudiolist" >
+        <h5>Mera jo safar hai .Iqlipse Nova-</h5>
+        <br>
+        <audio controls>
+            <source src="Mera jo safar hai .Iqlipse Nova--hindi.mp3" type="audio/ogg">
+        </audio>
+    </div>
+      
+    </div>
   
            <div class="container">
+            <h2>Uploaded Audio Library</h2>
+        <br>
                 <div id="audioList"></div>
                 <button id="deleteAllButton" onclick="deleteAllAudios()">Delete All</button>
             </div>
@@ -335,6 +415,7 @@
             }
         }
     }
+     document.getElementById('audioFileInput').value = '';
 }
 
         function deleteAudio(audioItem, fileName) {
