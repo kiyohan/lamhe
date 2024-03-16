@@ -349,7 +349,7 @@
         <div class="header">
           <h3>Uploaded To Server</h3>
       </div>
-      <div class="server-div" onclick="selectImage(event)"></div>
+      <div class="server-div" onclick="handleImageSelection(event)"></div>
     
         <div class="selected-images">
             <h3>Selected Images</h3>
@@ -357,10 +357,11 @@
             <div class="selected-images-div"></div>
             <br>
         </div>
+        <div id="image-container"></div> 
         <div class="anonymus">
-        <div><button  class="create_vid" onclick="clearSelectedImages()">Clear Selected Images</button></div>
-        <div><button class="create_vid"><a href="video.html">Create Video</a></button></div>
-        <div><button class="create_vid"><a href="audio.html">Audio Library</a></button></div>
+        <!-- <div><button  class="create_vid" onclick="clearSelectedImages()">Clear Selected Images</button></div> -->
+        <button onclick="fetchVideo()">Create Video</button>
+        <div id="video-container"></div>
       </div>
     </main>
     <script>
@@ -388,6 +389,7 @@
           });
           imagesArray = await Promise.all(imagesPromises);
           displayImages(imagesArray);
+          console.log(imagesArray);
       } catch (error) {
           console.error('Error fetching images:', error);
       }
@@ -398,7 +400,8 @@
       window.location.reload();
      }, 500); 
   } 
-
+  fetchImages();
+  window.addEventListener('load', fetchImages);
   function displayImages(imagesData) {
       const imageContainer = document.querySelector('.server-div');
       let imagesHTML = '';
@@ -413,18 +416,11 @@
       });
       imageContainer.innerHTML = imagesHTML;
   }
-  
-  fetchImages();
-  
-  
-
- 
-   window.addEventListener('load', fetchImages);
-    
 
    function handleFileSelection() {
     const files = input.files;
     let isError = false;
+    console.log(queuedImagesArray)
     for (let i = 0; i < files.length; i++) {
         if (queuedImagesArray.find(image => image.name === files[i].name)) {
             isError = true;
@@ -441,8 +437,7 @@
     }
     displayQueuedImages();
     uploadImagesToFlask(queuedImagesArray);
-  
-   
+    console.log(queuedImagesArray)
 }
 function handleFileDrop(e) {
     e.preventDefault();
@@ -466,6 +461,7 @@ function handleFileDrop(e) {
         
     }
     displayQueuedImages();
+   
     uploadImagesToFlask(queuedImagesArray);
    
 }
@@ -475,7 +471,7 @@ function handleFileDrop(e) {
       images.forEach(image => {
           formData.append('file', image);
       });
-
+      console.log(images);
       fetch('/upload_images', {
               method: 'POST',
               body: formData
@@ -489,55 +485,125 @@ function handleFileDrop(e) {
           })
           .catch(error => console.error('Error:', error));
   }
+ 
+function handleImageSelection(event) {
+  const image = event.target.closest('.image');
+  if (image) {
+      const index = image.dataset.index;
+      console.log(queuedImagesArray);
+      const selectedImage = imagesArray[index];
+      selectedImagesArray.push(selectedImage); 
+      displaySelectedImages(selectedImagesArray);
+      uploadselectedImagesToFlask(selectedImagesArray)
+      console.log(selectedImagesArray);
+  }
+}
 
 
-    function displayQueuedImages() {
-        let images = "";
-        queuedImagesArray.forEach((image, index) => {
-            images += `<div class="image" data-index="${index}">
-                <span class="index"  >${index + 1}</span>
-                <img src="${URL.createObjectURL(image)}" alt="image"> 
-            </div>`;
-        });
-        queuedDiv.innerHTML = images;
-    } 
+function displaySelectedImages(selectedImagesArray) {
+  console.log(selectedImagesArray);
 
-    function selectImage(event) {
-        const clickedImage = event.target.closest('.image');
-        if (clickedImage) {
-            const index = clickedImage.getAttribute('data-index');
-            const selectedImage = imagesArray[index];
-            selectedImagesArray.push(selectedImage); 
-            displaySelectedImages();
-            displayQueuedImages();
-        }
+  // Check if selectedImagesArray is undefined or null
+  if (!selectedImagesArray || selectedImagesArray.length === 0) {
+  selectedImagesDiv.innerHTML = "";
+
+    console.error("Selected images array is undefined or empty.");
+    return;
+  }
+
+  let images = "";
+  selectedImagesArray.forEach((image, index) => {
+    images += `<div class="image" data-index="${index}">
+        <span class="index">${index + 1}</span>
+        <img src="${URL.createObjectURL(image)}" alt="image">
+    </div>`;
+  });
+  selectedImagesDiv.innerHTML = images;
+}
+
+function uploadselectedImagesToFlask(selectedImagesArray) {
+  if (selectedImagesArray.length === 0) {
+      console.error('No images selected');
+      return;
+  }
+
+  const formData = new FormData();
+  selectedImagesArray.forEach((image, index) => {
+      // Convert Blob to File
+      const file = new File([image], `image${index + 1}.png`, { type: 'image/png' });
+      formData.append('file', file);
+  });
+
+  fetch('/upload_selected_images', {
+      method: 'POST',
+      body: formData
+  })
+  .then(response => {
+      if (response.ok) {
+          console.log('Images uploaded successfully');
+      } else {
+          console.error('Failed to upload images');
+      }
+  })
+  .catch(error => console.error('Error:', error));
+}
+
+
+
+  function displayQueuedImages() {
+    let images = "";
+    console.log(queuedImagesArray);
+    queuedImagesArray.forEach((image, index) => {
+        images += `<div class="image" data-index="${index}">
+            <span class="index"  >${index + 1}</span>
+            <img src="${URL.createObjectURL(image)}" alt="image"> 
+        </div>`;
+    });
+    queuedDiv.innerHTML = images;
+} 
+
+   // Function to handle the response from the Flask route
+   function handleVideoCreationResponse(response) {
+    if (response.video_url) {
+        // Video URL is present, display the message and the video
+        alert(response.message);
+        window.refreshPage
+        displayVideo(response.video_url);
+    } else {
+        // Video URL is not present, handle error if needed
+        console.error("Video URL not found in the response.");
     }
+}
 
-    function displaySelectedImages() {
-        let images = "";
-        selectedImagesArray.forEach((image, index) => {
-            images += `<div class="image" data-index="${index}">
-                <span class="index">${index + 1}</span>
-                <img src="${URL.createObjectURL(image)}" alt="image">
-                <span class="delete-icon"  onclick="deleteSelectedImage(${index})">&times;</span>
-            </div>`;
-        });
-        selectedImagesDiv.innerHTML = images;
-    }
+// Function to fetch the video from the Flask route
+function fetchVideo() {
+    fetch('/video')
+    .then(response => response.json())
+    .then(data => handleVideoCreationResponse(data))
+    .catch(error => console.error("Error fetching video:", error));
+}
 
-    function deleteSelectedImage(index) {
-        selectedImagesArray.splice(index, 1);
-        displaySelectedImages();
-        displayQueuedImages();
-    }
-
-    function clearSelectedImages() {
-        selectedImagesArray.length = 0;
-        displaySelectedImages();
-        displayQueuedImages();
-    }
-    
-   
+// Function to display the video on the page
+function displayVideo(videoUrl) {
+  // Remove any existing video element from the container
+  clearSelectedImages();
+  const existingVideoElement = document.getElementById('video-container').querySelector('video');
+  if (existingVideoElement) {
+      existingVideoElement.remove();
+  }
+  // Create a new video element
+  const videoElement = document.createElement('video');
+  videoElement.src = videoUrl;
+  videoElement.controls = true;
+  videoElement.width = 640;
+  videoElement.height = 360;
+  // Append the new video element to the container in the HTML document
+  document.getElementById('video-container').appendChild(videoElement);
+}
+function clearSelectedImages() {
+  selectedImagesArray.length = 0;
+  displaySelectedImages();
+}
     </script>
 
 </body>
