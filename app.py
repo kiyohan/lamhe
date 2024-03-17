@@ -12,6 +12,7 @@ from moviepy.editor import ImageSequenceClip, concatenate_videoclips
 import cv2
 import numpy as np
 import base64
+import time
 
 # Initialize Flask app
 app = Flask(__name__, static_url_path='', static_folder='static', template_folder='static')
@@ -346,18 +347,19 @@ def upload_selected_images():
 
     return jsonify({'message': 'Images uploaded successfully', 'files': uploaded_files}), 200
 
-def resize_image(image, target_size):
-    return image.resize(target_size)
-
-folder_name = 'selected-images'
-output_video_path = 'output_video.mp4'
-
 @app.route('/video')
-def video(folder_path=folder_name, output_path=output_video_path, fps=24, duration_per_image=3):
+def video(folder_path='selected-images', fps=24, duration_per_image=3):
     # Define the path for the video folder within the static directory
     static_video_folder = os.path.join('static', 'video')
     os.makedirs(static_video_folder, exist_ok=True)  # Create the video folder if it doesn't exist
+    for filename in os.listdir(static_video_folder):
+        file_path = os.path.join(static_video_folder, filename)
+        if os.path.isfile(file_path):
+            os.remove(file_path)
 
+    # Generate a new filename with timestamp
+    timestamp = int(time.time())
+    output_video_path = f'output_video_{timestamp}.mp4'
     # Adjust the output path to save the video inside the static/video folder
     output_path = os.path.join(static_video_folder, output_video_path)
 
@@ -366,10 +368,10 @@ def video(folder_path=folder_name, output_path=output_video_path, fps=24, durati
     
     if not image_files:
         print("No images found in the folder.")
-        return
-    files = os.listdir(folder_path)
-    max_width=1024
-    max_height=1024
+        return jsonify({'error': 'No images found in the folder'}), 404
+
+    max_width = 1024
+    max_height = 1024
 
     print(f"Max dimensions: {max_width}x{max_height}")
 
@@ -395,15 +397,20 @@ def video(folder_path=folder_name, output_path=output_video_path, fps=24, durati
     final_clip = concatenate_videoclips(clips)
     # Write the final video to the output path inside the static/video folder
     final_clip.write_videofile(output_path, codec='libx264')
-    # Retrieve audio files from the database
-    for file in files:
-        file_path = os.path.join(folder_path, file)
-        os.remove(file_path)
-    # return render_template('audio.html')
-    video_url = url_for('static', filename='video/output_video.mp4')
+
+    # Delete the original images after video creation
+    for img_file in image_files:
+        os.remove(os.path.join(folder_path, img_file))
+
+    # Construct the URL for the newly created video
+    video_url = url_for('static', filename=f'video/{output_video_path}')
     message = "Video created successfully!"
-    # return send_file(output_path, mimetype=mimetype, as_attachment=True)
+    # Return JSON response with the video URL
     return jsonify({'video_url': video_url, 'message': message})
+
+# Define the resize_image function
+def resize_image(image, target_size):
+    return image.resize(target_size)
 
 if __name__ == '__main__':
     app.run(debug=True)
