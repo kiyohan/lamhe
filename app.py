@@ -41,8 +41,12 @@ db_config = {
 
 
 # Establish database connection
+# def get_db_connection():
+#     return pymysql.connect(cursorclass=pymysql.cursors.DictCursor, **db_config)
 def get_db_connection():
-    return pymysql.connect(cursorclass=pymysql.cursors.DictCursor, **db_config)
+    conn = psycopg2.connect("postgresql://akmalali59855_gmail_:J-3IiGnvZtnFfRZ1CVKh_g@stream-strider-4060.7s5.aws-ap-south-1.cockroachlabs.cloud:26257/defaultdb?sslmode=verify-full")
+    # print("DATABASE_URL: ", os.environ["DATABASE_URL"])
+    return conn
 
 # Initialize database
 def init_db():
@@ -53,7 +57,7 @@ def init_db():
         # Create User_Details table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS users (
-                id INT AUTO_INCREMENT PRIMARY KEY,
+                id INT  PRIMARY KEY,
                 username VARCHAR(255) UNIQUE,
                 name VARCHAR(255),
                 email VARCHAR(255),
@@ -63,12 +67,12 @@ def init_db():
 
         # Create Images table
         cursor.execute("""CREATE TABLE IF NOT EXISTS image_details (
-            image_id INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
+            image_id INT PRIMARY KEY NOT NULL ,
             username VARCHAR(255) ,
             name VARCHAR(500) NOT NULL,
             size INT NOT NULL,
             extension VARCHAR(100),
-            img LONGBLOB
+            img BYTEA
         );
         """)
 
@@ -136,6 +140,7 @@ def login():
     if request.method == 'POST':
         username = request.form['Uname']
         password = request.form['Pass']
+        
 
         if username == 'admin' and password == 'admin':  # Check if it's the admin login
             try:
@@ -158,6 +163,14 @@ def login():
 
             cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
             user = cursor.fetchone()
+            # print(user)
+            user = {
+                'id': user[0],
+                'username': user[1],
+                'name': user[2],
+                'email': user[3],
+                'password': user[4]
+            }
 
             cursor.close()
             connection.close()
@@ -282,8 +295,12 @@ def get_uploaded_images():
         connection = get_db_connection()
         cursor = connection.cursor()
         
+        
         cursor.execute("SELECT name FROM image_details WHERE username = %s", (username,))
-        images = [row['name'] for row in cursor.fetchall()]
+        
+        images = [row[0] for row in cursor.fetchall()]
+        print(images)
+
         
         cursor.close()
         connection.close()
@@ -308,8 +325,9 @@ def serve_image(filename):
         cursor.close()
         connection.close()
 
+
         if image_data:
-            return send_file(BytesIO(image_data['img']), mimetype='image/jpeg')  # Adjust mimetype if needed
+            return send_file(BytesIO(image_data[0]), mimetype='image/jpeg')  # Adjust mimetype if needed
         else:
             return jsonify({'error': 'Image not found'}), 404
 
