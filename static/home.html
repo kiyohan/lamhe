@@ -582,26 +582,25 @@ function uploadselectedImagesToFlask(selectedImagesArray) {
     });
     queuedDiv.innerHTML = images;
 } 
-
-   // Function to handle the response from the Flask route
-   function handleVideoCreationResponse(response) {
-    if (response.video_url) {
-        // Video URL is present, display the message and the video
-        alert(response.message);
-        window.refreshPage
-        displayVideo(response.video_url);
-    } else {
-        // Video URL is not present, handle error if needed
-        console.error("Video URL not found in the response.");
-    }
+// Function to handle the response from the Flask route
+function handleVideoCreationResponse(response) {
+  if (response.video_url) {
+      // Video URL is present, display the message and the video
+      alert(response.message);
+      // Refresh the page to display the latest video
+      displayVideo(response.video_url);
+  } else {
+      // Video URL is not present, handle error if needed
+      console.error("Video URL not found in the response.");
+  }
 }
 
 // Function to fetch the video from the Flask route
 function fetchVideo() {
-    fetch('/video')
-    .then(response => response.json())
-    .then(data => handleVideoCreationResponse(data))
-    .catch(error => console.error("Error fetching video:", error));
+  fetch('/video')
+  .then(response => response.json())
+  .then(data => handleVideoCreationResponse(data))
+  .catch(error => console.error("Error fetching video:", error));
 }
 
 // Function to display the video on the page
@@ -611,20 +610,25 @@ function displayVideo(videoUrl) {
   const existingVideoElement = document.getElementById('video-container').querySelector('video');
   if (existingVideoElement) {
       existingVideoElement.remove();
+      console.log("Removed existing video element");
   }
+
   // Create a new video element
   const videoElement = document.createElement('video');
   videoElement.src = videoUrl;
   videoElement.controls = true;
   videoElement.width = 640;
   videoElement.height = 360;
+
   // Append the new video element to the container in the HTML document
   document.getElementById('video-container').appendChild(videoElement);
 }
+
 function clearSelectedImages() {
   selectedImagesArray.length = 0;
   displaySelectedImages();
 }
+
     </script>
 
 </body>

@@ -51,6 +51,7 @@ def get_db_connection():
 # Initialize database
 def init_db():
     try:
+
         connection = get_db_connection()
         cursor = connection.cursor()
 
