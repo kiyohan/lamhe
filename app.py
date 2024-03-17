@@ -8,9 +8,10 @@ from io import BytesIO
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity
 from PIL import Image
-from moviepy.editor import ImageSequenceClip, concatenate_videoclips
+from moviepy.editor import ImageSequenceClip, concatenate_videoclips,VideoFileClip,AudioFileClip
 import cv2
 import numpy as np
+import psycopg2
 import base64
 
 # Initialize Flask app
@@ -422,6 +423,40 @@ def video(folder_path=folder_name, output_path=output_video_path, fps=24, durati
     message = "Video created successfully!"
     # return send_file(output_path, mimetype=mimetype, as_attachment=True)
     return jsonify({'video_url': video_url, 'message': message})
+
+
+
+
+
+
+@app.route('/audio_selection', methods=['POST'])
+def audio_selection():
+    selected_Audio = request.form['Audio']
+    audio_path = os.path.join('static', 'audio', f'{selected_Audio}.mp3')
+    video_path = os.path.join('static', 'video', 'output_video.mp4')
+    output_video_path = os.path.join('static', 'video_with_audio', 'output.mp4')
+    
+    # Check if both the audio and video files exist
+    if os.path.exists(audio_path) and os.path.exists(video_path):
+        audio_clip = AudioFileClip(audio_path)
+        video_clip = VideoFileClip(video_path)
+        
+        # Add audio to the video
+        video_with_audio = video_clip.set_audio(audio_clip)
+        
+        # Write the new video file
+        video_with_audio.write_videofile(output_video_path)
+        
+        # Close the clips
+        audio_clip.close()
+        video_clip.close()
+        
+        # Return a link to the new video file
+        return send_from_directory('static', 'video_page.html')
+
+
+
+
 
 if __name__ == '__main__':
     app.run(debug=True)
