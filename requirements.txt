@@ -1,0 +1,9 @@
+
+Flask
+pymysql
+psycopg2-binary
+Pillow
+moviepy
+opencv-python-headless
+Flask-JWT-Extended
+numpy
