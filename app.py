@@ -34,23 +34,29 @@ jwt = JWTManager(app)
 # Ensure the upload directory exists
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-# Database configuration
-db_config = {
-    "host": "localhost",    
-    "user": "rohan",
-    "password": "@0NKmF710",
-    "db": "lamhe",
-}
 
 
-
-# # Establish database connection
-# def get_db_connection():
-#     return pymysql.connect(cursorclass=pymysql.cursors.DictCursor, **db_config)
 def get_db_connection():
-    conn = psycopg2.connect("postgresql://akmalali59855_gmail_:J-3IiGnvZtnFfRZ1CVKh_g@stream-strider-4060.7s5.aws-ap-south-1.cockroachlabs.cloud:26257/defaultdb?sslmode=verify-full")
-    # print("DATABASE_URL: ", os.environ["DATABASE_URL"])
+    # Decode the base64 certificate
+    cert_decoded = base64.b64decode(os.environ['ROOT_CERT_BASE64'])
+    
+    # Define the path to save the certificate
+    cert_path = '/opt/render/.postgresql/root.crt'
+    os.makedirs(os.path.dirname(cert_path), exist_ok=True)
+    
+    # Write the certificate to the file
+    with open(cert_path, 'wb') as cert_file:
+        cert_file.write(cert_decoded)
+    
+    # Set up the connection string with the path to the certificate
+    conn = psycopg2.connect(
+        "host=stream-strider-4060.7s5.aws-ap-south-1.cockroachlabs.cloud "
+        "port=26257 dbname=defaultdb user=akmalali59855_gmail_ "
+        "password=J-3IiGnvZtnFfRZ1CVKh_g sslmode=verify-full "
+        f"sslrootcert={cert_path}"
+    )
     return conn
+
 
 # Initialize database
 def init_db():
