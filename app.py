@@ -1,7 +1,6 @@
 # Import necessary modules
 import os
 from flask import Flask, request, render_template, redirect, send_from_directory,session,jsonify,send_file,url_for
-import pymysql
 import pickle
 import io
 from io import BytesIO
