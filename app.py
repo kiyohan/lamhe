@@ -8,11 +8,16 @@ from io import BytesIO
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity
 from PIL import Image
-from moviepy.editor import ImageSequenceClip, concatenate_videoclips
+from moviepy.editor import ImageSequenceClip, concatenate_videoclips ,concatenate_audioclips
+from moviepy.audio.io.AudioFileClip import AudioFileClip ,AudioClip
+import shutil
 import cv2
 import numpy as np
 import base64
+import urllib.parse
 import time
+import psycopg2
+
 
 # Initialize Flask app
 app = Flask(__name__, static_url_path='', static_folder='static', template_folder='static')
@@ -40,7 +45,7 @@ db_config = {
 
 
 
-# Establish database connection
+# # Establish database connection
 # def get_db_connection():
 #     return pymysql.connect(cursorclass=pymysql.cursors.DictCursor, **db_config)
 def get_db_connection():
@@ -364,12 +369,16 @@ def upload_selected_images():
         uploaded_files.append(image_name)
 
     return jsonify({'message': 'Images uploaded successfully', 'files': uploaded_files}), 200
+def resize_image(image, target_size):
+    return image.resize(target_size)
 
 @app.route('/video')
-def video(folder_path='selected-images', fps=24, duration_per_image=3):
-    # Define the path for the video folder within the static directory
-    static_video_folder = os.path.join('static', 'video')
-    os.makedirs(static_video_folder, exist_ok=True)  # Create the video folder if it doesn't exist
+def video(folder_path='selected-images', output_path='output_video.mp4', fps=24, duration_per_image=3):
+    static_folder = os.path.join(os.path.dirname(__file__), 'static')
+    static_video_folder = os.path.join(static_folder, 'video')
+    selected_audio_folder = os.path.join(os.path.dirname(__file__), 'selected-audio')
+    os.makedirs(static_video_folder, exist_ok=True)
+
     for filename in os.listdir(static_video_folder):
         file_path = os.path.join(static_video_folder, filename)
         if os.path.isfile(file_path):
@@ -382,53 +391,115 @@ def video(folder_path='selected-images', fps=24, duration_per_image=3):
     output_path = os.path.join(static_video_folder, output_video_path)
 
     image_files = [f for f in os.listdir(folder_path) if f.endswith(('.png', '.jpg', '.jpeg'))]
-    image_files.sort()  # Ensure images are sorted properly
-    
-    if not image_files:
-        print("No images found in the folder.")
-        return jsonify({'error': 'No images found in the folder'}), 404
+    image_files.sort()
 
-    max_width = 1024
-    max_height = 1024
+    if not image_files:
+        return jsonify({'message': "No images found in the folder."})
+
+    max_width, max_height = 1024, 1024
 
     print(f"Max dimensions: {max_width}x{max_height}")
 
-    # Resize images to match the maximum dimensions
     images_resized = []
     for img_file in image_files:
         img_path = os.path.join(folder_path, img_file)
         with Image.open(img_path) as img:
             resized_img = resize_image(img, (max_width, max_height))
-            # Convert image to numpy array and ensure it has only 3 channels (RGB)
             resized_img = np.array(resized_img)[:,:,:3]
             images_resized.append(resized_img)
 
-    # Calculate the number of frames for each image based on the duration
     num_frames_per_image = int(duration_per_image * fps)
 
-    # Construct the ImageSequenceClip for each image with specified duration
     clips = []
+
+    # Add default audio as the first clip
+    audio_files = [f for f in os.listdir(selected_audio_folder) if f.endswith('.mp3')]
+    if audio_files:
+        audio_path = os.path.join(selected_audio_folder, audio_files[0])
+        audio_clip = AudioFileClip(audio_path)
+        audio_duration = audio_clip.duration
+
+        # Trim audio if longer than video duration
+        total_video_duration = len(image_files) * duration_per_image
+        if audio_duration > total_video_duration:
+            audio_clip = audio_clip.subclip(0, total_video_duration)
+
+        # Repeat audio if shorter than video duration
+        while audio_clip.duration < total_video_duration:
+            audio_clip = concatenate_audioclips([audio_clip, audio_clip])
+
+        clips.append(audio_clip.set_duration(total_video_duration))
+
     for img in images_resized:
         clips.append(ImageSequenceClip([img], fps=fps).set_duration(duration_per_image))
 
-    # Concatenate all clips to form the final video
-    final_clip = concatenate_videoclips(clips)
-    # Write the final video to the output path inside the static/video folder
+    # Filter out audio clips
+    video_clips = [clip for clip in clips if not isinstance(clip, AudioClip)]
+
+    final_clip = concatenate_videoclips(video_clips, method="compose") # method compose for video and audio
+    
+    # Set audio for the final clip
+    for clip in clips:
+        if isinstance(clip, AudioClip):
+            final_clip = final_clip.set_audio(clip)
+
     final_clip.write_videofile(output_path, codec='libx264')
 
     # Delete the original images after video creation
-    for img_file in image_files:
-        os.remove(os.path.join(folder_path, img_file))
+    for file in image_files:
+        file_path = os.path.join(folder_path, file)
+        os.remove(file_path)
 
-    # Construct the URL for the newly created video
     video_url = url_for('static', filename=f'video/{output_video_path}')
     message = "Video created successfully!"
-    # Return JSON response with the video URL
     return jsonify({'video_url': video_url, 'message': message})
 
-# Define the resize_image function
-def resize_image(image, target_size):
-    return image.resize(target_size)
+
+
+@app.route('/get_audio_files')
+def get_audio_files():
+    audio_files = os.listdir('static/audio')
+    audio_data = {}
+    for filename in audio_files:
+        filepath = os.path.join('static/audio', filename)
+        with open(filepath, 'rb') as file:
+            audio_data[filename] = base64.b64encode(file.read()).decode('utf-8')
+    return jsonify(audio_data)
+
+
+@app.route('/select_audio', methods=['POST'])
+def select_audio():
+    data = request.json
+    filename = data.get('filename')
+    if not filename:
+        return 'No filename provided.', 400
+
+    selected_audio_folder = 'selected-audio'
+
+    # Check if the selected-audio folder exists, and if not, create it
+    if not os.path.exists(selected_audio_folder):
+        os.makedirs(selected_audio_folder)
+    else:
+        # If the folder exists, empty it by deleting all files
+        files_in_folder = os.listdir(selected_audio_folder)
+        for file_in_folder in files_in_folder:
+            file_path = os.path.join(selected_audio_folder, file_in_folder)
+            os.remove(file_path)
+
+    # Ensure that the selected audio file has a .mp3 extension
+    filename = filename.split('.')[0] + '.mp3'
+
+    # Convert base64 encoded audio data to bytes
+    audio_data_base64 = data.get('audioData')
+    audio_data = base64.b64decode(audio_data_base64)
+
+    # Write the audio data to the selected-audio folder as an MP3 file
+    selected_audio_path = os.path.join(selected_audio_folder, filename)
+    with open(selected_audio_path, 'wb') as file:
+        file.write(audio_data)
+
+    return 'Audio file selected and stored successfully.', 200
+
 
 if __name__ == '__main__':
     app.run(debug=True)

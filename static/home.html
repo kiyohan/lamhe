@@ -308,7 +308,38 @@
               align-items: center;
               justify-content: space-evenly;
             }
-           
+            .container {
+              max-width: 800px;
+              margin: 0 auto;
+              padding: 20px;
+          }
+          h1 {
+              text-align: center;
+              margin-bottom: 20px;
+          }
+          ul {
+              list-style-type: none;
+              padding: 0;
+          }
+          li {
+              margin-bottom: 10px;
+          }
+          audio {
+              width: 100%;
+          }
+          .audio-container {
+            cursor: pointer;
+            padding: 10px;
+          }
+          
+          .audio-container:hover {
+            background-color: #f0f0f0;
+          }
+          
+          .audio-container.selected {
+            background-color: #cce5ff;
+          }
+             
     </style>
 </head>
 <body>
@@ -322,7 +353,8 @@
             <ul>
                 <!-- <li><a href="#" class="active">Upload images</a> </li>
                 <li><a href="video.html">Create a Video</a> </li> -->
-                <li><a href="{{ url_for('logout') }}" >Log Out</a> </li>
+                <li><a href="login.html">Log Out</a> </li>
+
             </ul>
         </nav>
 
@@ -356,7 +388,13 @@
             <div class="selected-images-div"></div>
             <br>
         </div>
-        <div id="image-container"></div> 
+        <div id="image-container"></div>
+      
+        <div class="container">
+          <h1>Select an Audio File</h1>
+          <ul id="audio-list"></ul>
+      </div>
+    
         <div class="anonymus">
         <!-- <div><button  class="create_vid" onclick="clearSelectedImages()">Clear Selected Images</button></div> -->
         <button onclick="fetchVideo()">Create Video</button>
@@ -560,25 +598,26 @@ function uploadselectedImagesToFlask(selectedImagesArray) {
     });
     queuedDiv.innerHTML = images;
 } 
-// Function to handle the response from the Flask route
-function handleVideoCreationResponse(response) {
-  if (response.video_url) {
-      // Video URL is present, display the message and the video
-      alert(response.message);
-      // Refresh the page to display the latest video
-      displayVideo(response.video_url);
-  } else {
-      // Video URL is not present, handle error if needed
-      console.error("Video URL not found in the response.");
-  }
+
+   // Function to handle the response from the Flask route
+   function handleVideoCreationResponse(response) {
+    if (response.video_url) {
+        // Video URL is present, display the message and the video
+        alert(response.message);
+        window.refreshPage
+        displayVideo(response.video_url);
+    } else {
+        // Video URL is not present, handle error if needed
+        console.error("Video URL not found in the response.");
+    }
 }
 
 // Function to fetch the video from the Flask route
 function fetchVideo() {
-  fetch('/video')
-  .then(response => response.json())
-  .then(data => handleVideoCreationResponse(data))
-  .catch(error => console.error("Error fetching video:", error));
+    fetch('/video')
+    .then(response => response.json())
+    .then(data => handleVideoCreationResponse(data))
+    .catch(error => console.error("Error fetching video:", error));
 }
 
 // Function to display the video on the page
@@ -588,25 +627,87 @@ function displayVideo(videoUrl) {
   const existingVideoElement = document.getElementById('video-container').querySelector('video');
   if (existingVideoElement) {
       existingVideoElement.remove();
-      console.log("Removed existing video element");
   }
-
   // Create a new video element
   const videoElement = document.createElement('video');
   videoElement.src = videoUrl;
   videoElement.controls = true;
   videoElement.width = 640;
   videoElement.height = 360;
-
   // Append the new video element to the container in the HTML document
   document.getElementById('video-container').appendChild(videoElement);
 }
-
 function clearSelectedImages() {
   selectedImagesArray.length = 0;
   displaySelectedImages();
 }
 
+
+document.addEventListener('DOMContentLoaded', function() {
+  fetch('/get_audio_files')
+  .then(response => response.json())
+  .then(audioFiles => {
+      const audioList = document.getElementById('audio-list');
+      console.log(audioFiles);
+      for (const filename in audioFiles) {
+          const audioData = audioFiles[filename];
+          const audioElement = `
+              <div class="audio-container">
+                  <p class="audio-name">${filename}</p>
+                  <audio controls>
+                      <source src="data:audio/mpeg;base64,${audioData}" type="audio/mpeg">
+                      Your browser does not support the audio element.
+                  </audio>
+              </div>
+          `;
+          audioList.innerHTML += audioElement;
+      }
+
+      // Add event listeners to audio file containers
+      const audioContainers = document.querySelectorAll('.audio-container');
+      audioContainers.forEach(audioContainer => {
+          audioContainer.addEventListener('click', function() {
+              // Remove selection from all other audio containers
+              audioContainers.forEach(container => {
+                  container.classList.remove('selected');
+              });
+
+              // Add selection to the clicked audio container
+              this.classList.add('selected');
+
+              // Retrieve selected audio file information
+              const selectedFileName = this.querySelector('.audio-name').textContent;
+              console.log('Selected audio file:', selectedFileName);
+              const selectedAudioData = audioFiles[selectedFileName];
+              fetch('/select_audio', {
+                  method: 'POST',
+                  headers: {
+                      'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify({ 
+                      filename: selectedFileName,
+                      audioData: selectedAudioData  // Pass audio data along with the filename
+                  })
+              })
+              .then(response => {
+                  if (response.ok) {
+                      console.log('Audio file selected and stored successfully.');
+                  } else {
+                      throw new Error('Failed to select audio file.');
+                  }
+              })
+              .catch(error => {
+                  console.error('Error:', error);
+              });
+          });
+      });
+  })
+  .catch(error => {
+      console.error('Error:', error);
+  });
+});
+
+       
     </script>
 
 </body>
