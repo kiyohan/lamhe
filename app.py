@@ -8,8 +8,9 @@ from io import BytesIO
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity
 from PIL import Image
-from moviepy.editor import ImageSequenceClip, concatenate_videoclips ,concatenate_audioclips
+from moviepy.editor import concatenate_audioclips
 from moviepy.audio.io.AudioFileClip import AudioFileClip ,AudioClip
+from moviepy.editor import ImageSequenceClip, concatenate_videoclips
 import shutil
 import cv2
 import numpy as np
@@ -17,8 +18,9 @@ import base64
 import urllib.parse
 import time
 import psycopg2
-
-
+import subprocess
+import glob
+from datetime import datetime
 # Initialize Flask app
 app = Flask(__name__, static_url_path='', static_folder='static', template_folder='static')
 app.secret_key = 'Helloworld'
@@ -367,10 +369,10 @@ def upload_selected_images():
         with open(image_path, 'wb') as f:
             f.write(image_data)
         uploaded_files.append(image_name)
-
     return jsonify({'message': 'Images uploaded successfully', 'files': uploaded_files}), 200
-def resize_image(image, target_size):
-    return image.resize(target_size)
+
+
+
 
 @app.route('/video')
 def video(folder_path='selected-images', output_path='output_video.mp4', fps=24, duration_per_image=3):
@@ -378,7 +380,7 @@ def video(folder_path='selected-images', output_path='output_video.mp4', fps=24,
     static_video_folder = os.path.join(static_folder, 'video')
     selected_audio_folder = os.path.join(os.path.dirname(__file__), 'selected-audio')
     os.makedirs(static_video_folder, exist_ok=True)
-
+    
     for filename in os.listdir(static_video_folder):
         file_path = os.path.join(static_video_folder, filename)
         if os.path.isfile(file_path):
@@ -395,20 +397,6 @@ def video(folder_path='selected-images', output_path='output_video.mp4', fps=24,
 
     if not image_files:
         return jsonify({'message': "No images found in the folder."})
-
-    max_width, max_height = 1024, 1024
-
-    print(f"Max dimensions: {max_width}x{max_height}")
-
-    images_resized = []
-    for img_file in image_files:
-        img_path = os.path.join(folder_path, img_file)
-        with Image.open(img_path) as img:
-            resized_img = resize_image(img, (max_width, max_height))
-            resized_img = np.array(resized_img)[:,:,:3]
-            images_resized.append(resized_img)
-
-    num_frames_per_image = int(duration_per_image * fps)
 
     clips = []
 
@@ -430,8 +418,10 @@ def video(folder_path='selected-images', output_path='output_video.mp4', fps=24,
 
         clips.append(audio_clip.set_duration(total_video_duration))
 
-    for img in images_resized:
-        clips.append(ImageSequenceClip([img], fps=fps).set_duration(duration_per_image))
+    for img_file in image_files:
+        img_path = os.path.join(folder_path, img_file)
+        img_clip = ImageSequenceClip([img_path], fps=fps)
+        clips.append(img_clip.set_duration(duration_per_image))
 
     # Filter out audio clips
     video_clips = [clip for clip in clips if not isinstance(clip, AudioClip)]
@@ -443,16 +433,34 @@ def video(folder_path='selected-images', output_path='output_video.mp4', fps=24,
         if isinstance(clip, AudioClip):
             final_clip = final_clip.set_audio(clip)
 
-    final_clip.write_videofile(output_path, codec='libx264')
+    # Write video in chunks instead of processing the entire clip at once
+    chunk_duration = 10  # Duration of each chunk in seconds
+    num_chunks = int(np.ceil(final_clip.duration / chunk_duration))
+
+    for i in range(num_chunks):
+        start_time = i * chunk_duration
+        end_time = min((i + 1) * chunk_duration, final_clip.duration)
+        chunk = final_clip.subclip(start_time, end_time)
+        chunk_output_path = output_path.replace('.mp4', f'_chunk_{i}.mp4')
+        chunk.write_videofile(chunk_output_path, codec='libx264', fps=fps)
 
     # Delete the original images after video creation
     for file in image_files:
         file_path = os.path.join(folder_path, file)
         os.remove(file_path)
 
-    video_url = url_for('static', filename=f'video/{output_video_path}')
+    video_urls = [url_for('static', filename=f'video/{output_video_path}'.replace('.mp4', f'_chunk_{i}.mp4')) for i in range(num_chunks)]
     message = "Video created successfully!"
-    return jsonify({'video_url': video_url, 'message': message})
+    return jsonify({'video_url': video_urls, 'message': message})
+
+
+
+
+
+
+
+
+
 
 
 
