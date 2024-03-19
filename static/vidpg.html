@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Playback</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #6c5ce7;
+            margin: 0;
+            padding: 0;
+            color: #fff;
+        }
+        .video-wrapper {
+            text-align: center;
+            margin-bottom: 20px;
+            max-width: 100%;
+            max-height: 80vh;
+            overflow: hidden;
+        }
+        video {
+            width: auto;
+            height: auto;
+            max-width: 100%;
+            max-height: 100%;
+        }
+        .form-wrapper {
+            text-align: center;
+        }
+        .quality-select {
+            background-color: #fff;
+            color: #333;
+            border-radius: 5px;
+            padding: 5px 10px;
+            border: none;
+            margin-right: 10px;
+        }
+        .download-button {
+            background-color: #00b894;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        .download-button:hover {
+            background-color: #33d9b2;
+        }
+    </style>
+</head>
+<div class="video-wrapper">
+    <video id="videoPlayer" controls>
+        <source id="videoSource" src="" type="video/mp4">
+        Your browser does not support the video tag.
+    </video>
+</div>
+<div class="form-wrapper">
+    <form id="qualityForm" action="/download_video" method="post">
+        <select id="qualitySelect" name="quality" class="quality-select">
+            <option value="360px">360px</option>
+            <option value="720px">720px</option>
+            <option value="1080px">1080px</option>
+        </select>
+        <input type="hidden" id="videoUrl" name="video_url">
+        <button type="submit" class="download-button">Download</button>
+    </form>
+</div>
+<script>
+    window.onload = function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const videoUrl = urlParams.get('video_url');
+        if (videoUrl) {
+            const videoSource = document.getElementById('videoSource');
+            videoSource.src = decodeURIComponent(videoUrl);
+            const videoPlayer = document.getElementById('videoPlayer');
+            videoPlayer.load();
+            document.getElementById('videoUrl').value = videoSource.src; // Set the hidden input's value
+        }
+    };
+
+    // No longer needed since we're not using an anchor tag for download
+    // document.getElementById('qualitySelect').addEventListener('change', () => {
+    //     alert('Quality changed to ' + document.getElementById('qualitySelect').value);
+    // });
+</script>
+</body>
+</html>

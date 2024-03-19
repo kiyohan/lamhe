@@ -6,10 +6,9 @@ import io
 from io import BytesIO
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity
-from PIL import Image
-from moviepy.editor import concatenate_audioclips
+from PIL import Image, ImageOps
+from moviepy.editor import ImageSequenceClip, concatenate_videoclips ,concatenate_audioclips,VideoFileClip,ImageClip
 from moviepy.audio.io.AudioFileClip import AudioFileClip ,AudioClip
-from moviepy.editor import ImageSequenceClip, concatenate_videoclips
 import shutil
 import cv2
 import numpy as np
@@ -17,9 +16,9 @@ import base64
 import urllib.parse
 import time
 import psycopg2
-import subprocess
-import glob
-from datetime import datetime
+import requests
+from multiprocessing import Pool
+
 # Initialize Flask app
 app = Flask(__name__, static_url_path='', static_folder='static', template_folder='static')
 app.secret_key = 'Helloworld'
@@ -36,8 +35,7 @@ jwt = JWTManager(app)
 # Ensure the upload directory exists
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-
-
+#db connection for render
 def get_db_connection():
     # Decode the base64 certificate
     cert_decoded = base64.b64decode(os.environ['ROOT_CERT_BASE64'])
@@ -59,6 +57,11 @@ def get_db_connection():
     )
     return conn
 
+# #db connection for local host
+# def get_db_connection():
+#     conn = psycopg2.connect("postgresql://akmalali59855_gmail_:J-3IiGnvZtnFfRZ1CVKh_g@stream-strider-4060.7s5.aws-ap-south-1.cockroachlabs.cloud:26257/defaultdb?sslmode=verify-full")
+#     # print("DATABASE_URL: ", os.environ["DATABASE_URL"])
+#     return conn
 
 # Initialize database
 def init_db():
@@ -107,9 +110,7 @@ def index():
 
 
 
-# Your login route
-from werkzeug.security import generate_password_hash, check_password_hash
-
+# Route to register a new user
 @app.route('/register', methods=['POST'])
 def register():
     if request.method == 'POST':
@@ -146,7 +147,8 @@ def register():
 
         except Exception as e:
             return f"An error occurred: {e}", 500
-
+        
+        
 @app.route('/login', methods=['POST'])
 def login():
     if request.method == 'POST':
@@ -160,7 +162,17 @@ def login():
                 cursor = connection.cursor()
 
                 cursor.execute("SELECT id, username, name, email FROM users")
-                users = cursor.fetchall()
+                rows = cursor.fetchall()
+
+                users = []
+                for row in rows:
+                    user = {
+                        'id': row[0],
+                        'username': row[1],
+                        'name': row[2],
+                        'email': row[3]
+                    }
+                users.append(user)
 
                 cursor.close()
                 connection.close()
@@ -374,97 +386,86 @@ def upload_selected_images():
         with open(image_path, 'wb') as f:
             f.write(image_data)
         uploaded_files.append(image_name)
+
     return jsonify({'message': 'Images uploaded successfully', 'files': uploaded_files}), 200
 
 
 
-
 @app.route('/video')
-def video(folder_path='selected-images', output_path='output_video.mp4', fps=24, duration_per_image=3):
-    static_folder = os.path.join(os.path.dirname(__file__), 'static')
-    static_video_folder = os.path.join(static_folder, 'video')
-    selected_audio_folder = os.path.join(os.path.dirname(__file__), 'selected-audio')
-    os.makedirs(static_video_folder, exist_ok=True)
-    
-    for filename in os.listdir(static_video_folder):
-        file_path = os.path.join(static_video_folder, filename)
-        if os.path.isfile(file_path):
-            os.remove(file_path)
+def video(image_folder='selected-images', audio_folder='selected-audio'):
+    # Capture current time
+    current_time = int(time.time())
 
-    # Generate a new filename with timestamp
-    timestamp = int(time.time())
-    output_video_path = f'output_video_{timestamp}.mp4'
-    # Adjust the output path to save the video inside the static/video folder
-    output_path = os.path.join(static_video_folder, output_video_path)
+    # Clear existing videos in the video folder
+    video_folder = os.path.join('static', 'video')
+    if os.path.exists(video_folder):
+        shutil.rmtree(video_folder)
+    os.makedirs(video_folder)
 
-    image_files = [f for f in os.listdir(folder_path) if f.endswith(('.png', '.jpg', '.jpeg'))]
-    image_files.sort()
+    # Ensure all images are the same size or adjust the size here
+    frame_size = (1920,1520)  # Example frame size, adjust to match your images
 
-    if not image_files:
-        return jsonify({'message': "No images found in the folder."})
+    # Calculate frame rate to show each image for 3 seconds
+    image_duration = 3  # Duration each image should be shown (in seconds)
+    fps = 1 / image_duration
 
-    clips = []
+    # Initialize video writer for MP4 format
+    video_filename = 'output_video_{}.mp4'.format(current_time)
+    video_path = os.path.join(video_folder, video_filename)
 
-    # Add default audio as the first clip
-    audio_files = [f for f in os.listdir(selected_audio_folder) if f.endswith('.mp3')]
-    if audio_files:
-        audio_path = os.path.join(selected_audio_folder, audio_files[0])
-        audio_clip = AudioFileClip(audio_path)
+    # Get list of image files from image_folder
+    image_files = [os.path.join(image_folder, file) for file in os.listdir(image_folder) if file.endswith(('.jpg', '.png', '.jpeg'))]
+
+    # List to hold video clips for each image
+    video_clips = []
+
+    for image_path in image_files:
+        # Read each image
+        img = cv2.imread(image_path)
+        # Convert image from BGR to RGB
+        img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        # Resize image to match frame size if necessary
+        img_resized = cv2.resize(img_rgb, frame_size)
+        # Create video clip for the image for the duration of image_duration
+        video_clips.append(ImageClip(img_resized).set_duration(image_duration))
+
+    # Concatenate all video clips into one
+    final_video_clip = concatenate_videoclips(video_clips, method="compose")
+
+    # Set the fps attribute for the final video clip
+    final_video_clip.fps = fps
+
+    # Get audio file path
+    audio_file = os.path.join(audio_folder, os.listdir(audio_folder)[0])  # Assuming only one audio file
+    audio_clip = AudioFileClip(audio_file)
+
+    # Check video duration
+    video_duration = final_video_clip.duration
+
+    # Trim or repeat audio based on video duration
+    if video_duration < audio_clip.duration:
+        # Trim audio if video duration is less than audio duration
+        audio_clip = audio_clip.subclip(0, video_duration)
+    elif video_duration > audio_clip.duration:
+        # Repeat audio if video duration is greater than audio duration
+        # Loop the audio clip to match the duration of the video
         audio_duration = audio_clip.duration
+        num_loops = int(video_duration / audio_duration) + 1  # Calculate the number of times to loop audio
+        looped_audio = concatenate_audioclips([audio_clip] * num_loops)
+        audio_clip = looped_audio.subclip(0, video_duration)  # Trim audio to match video duration
 
-        # Trim audio if longer than video duration
-        total_video_duration = len(image_files) * duration_per_image
-        if audio_duration > total_video_duration:
-            audio_clip = audio_clip.subclip(0, total_video_duration)
+    # Set audio for the final video
+    final_video_clip = final_video_clip.set_audio(audio_clip)
 
-        # Repeat audio if shorter than video duration
-        while audio_clip.duration < total_video_duration:
-            audio_clip = concatenate_audioclips([audio_clip, audio_clip])
+    # Write the result to a new MP4 file
+    final_output_filename = 'output_video_{}.mp4'.format(current_time)
+    final_video_clip.write_videofile(os.path.join(video_folder, final_output_filename), codec='libx264', audio_codec='aac')
 
-        clips.append(audio_clip.set_duration(total_video_duration))
+    # Clear images from selected-images folder
+    shutil.rmtree(image_folder)
+    os.makedirs(image_folder)
 
-    for img_file in image_files:
-        img_path = os.path.join(folder_path, img_file)
-        img_clip = ImageSequenceClip([img_path], fps=fps)
-        clips.append(img_clip.set_duration(duration_per_image))
-
-    # Filter out audio clips
-    video_clips = [clip for clip in clips if not isinstance(clip, AudioClip)]
-
-    final_clip = concatenate_videoclips(video_clips, method="compose") # method compose for video and audio
-    
-    # Set audio for the final clip
-    for clip in clips:
-        if isinstance(clip, AudioClip):
-            final_clip = final_clip.set_audio(clip)
-
-    # Write video in chunks instead of processing the entire clip at once
-    chunk_duration = 10  # Duration of each chunk in seconds
-    num_chunks = int(np.ceil(final_clip.duration / chunk_duration))
-
-    for i in range(num_chunks):
-        start_time = i * chunk_duration
-        end_time = min((i + 1) * chunk_duration, final_clip.duration)
-        chunk = final_clip.subclip(start_time, end_time)
-        chunk_output_path = output_path.replace('.mp4', f'_chunk_{i}.mp4')
-        chunk.write_videofile(chunk_output_path, codec='libx264', fps=fps)
-
-    # Delete the original images after video creation
-    for file in image_files:
-        file_path = os.path.join(folder_path, file)
-        os.remove(file_path)
-
-    video_urls = [url_for('static', filename=f'video/{output_video_path}'.replace('.mp4', f'_chunk_{i}.mp4')) for i in range(num_chunks)]
-    message = "Video created successfully!"
-    return jsonify({'video_url': video_urls, 'message': message})
-
-
-
-
-
-
-
-
+    return jsonify({'video_url': url_for('static', filename=os.path.join('video', final_output_filename)), 'message': 'Video created successfully!'})
 
 
 
@@ -512,6 +513,34 @@ def select_audio():
         file.write(audio_data)
 
     return 'Audio file selected and stored successfully.', 200
+
+
+@app.route('/download_video', methods=['POST'])
+def download_video():
+    quality = request.form.get('quality')
+    video_url = request.form.get('video_url')
+    video_filename = video_url.split('/')[-1]
+    video_path = os.path.join(app.static_folder, 'video', video_filename)
+    output_path = os.path.join(app.static_folder, 'video', f'processed_{video_filename[:-4]}_{quality}.mp4')
+
+    try:
+        clip = VideoFileClip(video_path)
+        resolutions = {
+            '360px': (640, 360, '500k'),
+            '720px': (1280, 720, '1500k'),
+            '1080px': (1920, 1080, '2500k'),
+        }
+        width, height, bitrate = resolutions.get(quality, (*clip.size, '2500k'))
+        resized_clip = clip.resize(newsize=(width, height))
+        resized_clip.write_videofile(output_path, codec='libx264', bitrate=bitrate, temp_audiofile='temp-audio.m4a', remove_temp=True, audio_codec='aac')
+    except Exception as e:
+        print(f"An error occurred during video processing: {e}")
+        return jsonify({'error': f'Error processing video: {str(e)}'}), 500
+
+    if os.path.isfile(output_path):
+        return send_from_directory(os.path.dirname(output_path), os.path.basename(output_path), as_attachment=True)
+    else:
+        return jsonify({'error': 'Processed video file not found'}), 404
 
 
 if __name__ == '__main__':

@@ -124,9 +124,13 @@
             border-radius: 5px;
             cursor: pointer;
             border: 1px solid black;
-            background-color: black;
+            background-color: blueviolet;
             box-shadow: 0px 2px 6px 0px rgba(0, 0, 0, 0.5);
             font-size: 0.9rem;
+            transition: background-color 0.3s;
+          }
+          button:hover {
+            background-color: #00b894;
           }
           
           .app {
@@ -339,6 +343,12 @@
           .audio-container.selected {
             background-color: #cce5ff;
           }
+          .anonymus{
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-evenly;
+          }
              
     </style>
 </head>
@@ -398,6 +408,9 @@
         <div class="anonymus">
         <!-- <div><button  class="create_vid" onclick="clearSelectedImages()">Clear Selected Images</button></div> -->
         <button onclick="fetchVideo()">Create Video</button>
+        <br>
+        <div id="loadingMessage" style="display: none;">Creating your video, please wait...</div>
+        <br>
         <div id="video-container"></div>
       </div>
     </main>
@@ -603,40 +616,46 @@ function uploadselectedImagesToFlask(selectedImagesArray) {
    function handleVideoCreationResponse(response) {
     if (response.video_url) {
         // Video URL is present, display the message and the video
+        document.getElementById('loadingMessage').style.display = 'none';
+        window.refreshPage;
         alert(response.message);
         window.refreshPage
         displayVideo(response.video_url);
     } else {
         // Video URL is not present, handle error if needed
+        document.getElementById('loadingMessage').style.display = 'none';
         console.error("Video URL not found in the response.");
     }
 }
 
 // Function to fetch the video from the Flask route
 function fetchVideo() {
+    document.getElementById('loadingMessage').style.display = 'block';
     fetch('/video')
     .then(response => response.json())
     .then(data => handleVideoCreationResponse(data))
-    .catch(error => console.error("Error fetching video:", error));
+    .catch(error => {
+      // Hide the loading message if an error occurs
+      document.getElementById('loadingMessage').style.display = 'none';
+      console.error("Error fetching video:", error);
+  });
 }
 
 // Function to display the video on the page
 function displayVideo(videoUrl) {
-  // Remove any existing video element from the container
+  // Clear selected images
   clearSelectedImages();
+
+  // Remove any existing video element from the video-container
   const existingVideoElement = document.getElementById('video-container').querySelector('video');
   if (existingVideoElement) {
       existingVideoElement.remove();
   }
-  // Create a new video element
-  const videoElement = document.createElement('video');
-  videoElement.src = videoUrl;
-  videoElement.controls = true;
-  videoElement.width = 640;
-  videoElement.height = 360;
-  // Append the new video element to the container in the HTML document
-  document.getElementById('video-container').appendChild(videoElement);
+
+  // Redirect to vidpg.html with the video URL as a query parameter
+  window.location.href = `vidpg.html?video_url=${encodeURIComponent(videoUrl)}`;
 }
+
 function clearSelectedImages() {
   selectedImagesArray.length = 0;
   displaySelectedImages();
