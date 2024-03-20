@@ -35,33 +35,33 @@ jwt = JWTManager(app)
 # Ensure the upload directory exists
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-# db connection for render
-def get_db_connection():
-    # Decode the base64 certificate
-    cert_decoded = base64.b64decode(os.environ['ROOT_CERT_BASE64'])
-    
-    # Define the path to save the certificate
-    cert_path = '/opt/render/.postgresql/root.crt'
-    os.makedirs(os.path.dirname(cert_path), exist_ok=True)
-    
-    # Write the certificate to the file
-    with open(cert_path, 'wb') as cert_file:
-        cert_file.write(cert_decoded)
-    
-    # Set up the connection string with the path to the certificate
-    conn = psycopg2.connect(
-        "host=stream-strider-4060.7s5.aws-ap-south-1.cockroachlabs.cloud "
-        "port=26257 dbname=defaultdb user=akmalali59855_gmail_ "
-        "password=J-3IiGnvZtnFfRZ1CVKh_g sslmode=verify-full "
-        f"sslrootcert={cert_path}"
-    )
-    return conn
-
-# #db connection for local host
+# # db connection for render
 # def get_db_connection():
-#     conn = psycopg2.connect("postgresql://akmalali59855_gmail_:J-3IiGnvZtnFfRZ1CVKh_g@stream-strider-4060.7s5.aws-ap-south-1.cockroachlabs.cloud:26257/defaultdb?sslmode=verify-full")
-#     # print("DATABASE_URL: ", os.environ["DATABASE_URL"])
+#     # Decode the base64 certificate
+#     cert_decoded = base64.b64decode(os.environ['ROOT_CERT_BASE64'])
+    
+#     # Define the path to save the certificate
+#     cert_path = '/opt/render/.postgresql/root.crt'
+#     os.makedirs(os.path.dirname(cert_path), exist_ok=True)
+    
+#     # Write the certificate to the file
+#     with open(cert_path, 'wb') as cert_file:
+#         cert_file.write(cert_decoded)
+    
+#     # Set up the connection string with the path to the certificate
+#     conn = psycopg2.connect(
+#         "host=stream-strider-4060.7s5.aws-ap-south-1.cockroachlabs.cloud "
+#         "port=26257 dbname=defaultdb user=akmalali59855_gmail_ "
+#         "password=J-3IiGnvZtnFfRZ1CVKh_g sslmode=verify-full "
+#         f"sslrootcert={cert_path}"
+#     )
 #     return conn
+
+#db connection for local host
+def get_db_connection():
+    conn = psycopg2.connect("postgresql://akmalali59855_gmail_:J-3IiGnvZtnFfRZ1CVKh_g@stream-strider-4060.7s5.aws-ap-south-1.cockroachlabs.cloud:26257/defaultdb?sslmode=verify-full")
+    # print("DATABASE_URL: ", os.environ["DATABASE_URL"])
+    return conn
 
 # Initialize database
 def init_db():
@@ -405,11 +405,7 @@ def video(image_folder='selected-images', audio_folder='selected-audio'):
     if os.path.exists(video_folder):
         shutil.rmtree(video_folder)
     os.makedirs(video_folder,exist_ok=True)
-    
-
-    
-    
-
+    os.makedirs('selected-audio',exist_ok=True)
     # Ensure all images are the same size or adjust the size here
     frame_size = (1920,1520)  # Example frame size, adjust to match your images
 
@@ -423,9 +419,6 @@ def video(image_folder='selected-images', audio_folder='selected-audio'):
 
     # Get list of image files from image_folder
     image_files = [os.path.join(image_folder, file) for file in os.listdir(image_folder) if file.endswith(('.jpg', '.png', '.jpeg'))]
-
-    # Clear images from selected-images folder
-
 
     # List to hold video clips for each image
     video_clips = []
@@ -452,40 +445,40 @@ def video(image_folder='selected-images', audio_folder='selected-audio'):
     # Set the fps attribute for the final video clip
     final_video_clip.fps = fps
 
-    # Get audio file path
-    audio_file = os.path.join(audio_folder, os.listdir(audio_folder)[0])  # Assuming only one audio file
+    # Check if audio folder is not empty
+    audio_files = [file for file in os.listdir(audio_folder) if file.endswith(('.mp3', '.wav'))]
+    if audio_files:
+        # Get audio file path
+        audio_file = os.path.join(audio_folder, audio_files[0])  # Assuming only one audio file
+        audio_clip = AudioFileClip(audio_file)
 
-    # Clear audio files from selected-audio folder
+        # Clear audio files from selected-audio folder
+        shutil.rmtree(audio_folder)
+        os.makedirs(audio_folder)
 
+        # Check video duration
+        video_duration = final_video_clip.duration
 
-    audio_clip = AudioFileClip(audio_file)
-    shutil.rmtree(audio_folder)
-    os.makedirs(audio_folder)
+        # Trim or repeat audio based on video duration
+        if video_duration < audio_clip.duration:
+            # Trim audio if video duration is less than audio duration
+            audio_clip = audio_clip.subclip(0, video_duration)
+        elif video_duration > audio_clip.duration:
+            # Repeat audio if video duration is greater than audio duration
+            # Loop the audio clip to match the duration of the video
+            audio_duration = audio_clip.duration
+            num_loops = int(video_duration / audio_duration) + 1  # Calculate the number of times to loop audio
+            looped_audio = concatenate_audioclips([audio_clip] * num_loops)
+            audio_clip = looped_audio.subclip(0, video_duration)  # Trim audio to match video duration
 
-    # Check video duration
-    video_duration = final_video_clip.duration
-
-    # Trim or repeat audio based on video duration
-    if video_duration < audio_clip.duration:
-        # Trim audio if video duration is less than audio duration
-        audio_clip = audio_clip.subclip(0, video_duration)
-    elif video_duration > audio_clip.duration:
-        # Repeat audio if video duration is greater than audio duration
-        # Loop the audio clip to match the duration of the video
-        audio_duration = audio_clip.duration
-        num_loops = int(video_duration / audio_duration) + 1  # Calculate the number of times to loop audio
-        looped_audio = concatenate_audioclips([audio_clip] * num_loops)
-        audio_clip = looped_audio.subclip(0, video_duration)  # Trim audio to match video duration
-
-    # Set audio for the final video
-    final_video_clip = final_video_clip.set_audio(audio_clip)
+        # Set audio for the final video
+        final_video_clip = final_video_clip.set_audio(audio_clip)
 
     # Write the result to a new MP4 file
     final_output_filename = 'output_video_{}.mp4'.format(current_time)
     final_video_clip.write_videofile(os.path.join(video_folder, final_output_filename), codec='libx264', audio_codec='aac')
 
     return jsonify({'video_url': url_for('static', filename=os.path.join('video', final_output_filename)), 'message': 'Video created successfully!'})
-
 
 
 
