@@ -35,33 +35,33 @@ jwt = JWTManager(app)
 # Ensure the upload directory exists
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-# db connection for render
-def get_db_connection():
-    # Decode the base64 certificate
-    cert_decoded = base64.b64decode(os.environ['ROOT_CERT_BASE64'])
-    
-    # Define the path to save the certificate
-    cert_path = '/opt/render/.postgresql/root.crt'
-    os.makedirs(os.path.dirname(cert_path), exist_ok=True)
-    
-    # Write the certificate to the file
-    with open(cert_path, 'wb') as cert_file:
-        cert_file.write(cert_decoded)
-    
-    # Set up the connection string with the path to the certificate
-    conn = psycopg2.connect(
-        "host=stream-strider-4060.7s5.aws-ap-south-1.cockroachlabs.cloud "
-        "port=26257 dbname=defaultdb user=akmalali59855_gmail_ "
-        "password=J-3IiGnvZtnFfRZ1CVKh_g sslmode=verify-full "
-        f"sslrootcert={cert_path}"
-    )
-    return conn
-
-# #db connection for local host
+# # db connection for render
 # def get_db_connection():
-#     conn = psycopg2.connect("postgresql://akmalali59855_gmail_:J-3IiGnvZtnFfRZ1CVKh_g@stream-strider-4060.7s5.aws-ap-south-1.cockroachlabs.cloud:26257/defaultdb?sslmode=verify-full")
-#     # print("DATABASE_URL: ", os.environ["DATABASE_URL"])
+#     # Decode the base64 certificate
+#     cert_decoded = base64.b64decode(os.environ['ROOT_CERT_BASE64'])
+    
+#     # Define the path to save the certificate
+#     cert_path = '/opt/render/.postgresql/root.crt'
+#     os.makedirs(os.path.dirname(cert_path), exist_ok=True)
+    
+#     # Write the certificate to the file
+#     with open(cert_path, 'wb') as cert_file:
+#         cert_file.write(cert_decoded)
+    
+#     # Set up the connection string with the path to the certificate
+#     conn = psycopg2.connect(
+#         "host=stream-strider-4060.7s5.aws-ap-south-1.cockroachlabs.cloud "
+#         "port=26257 dbname=defaultdb user=akmalali59855_gmail_ "
+#         "password=J-3IiGnvZtnFfRZ1CVKh_g sslmode=verify-full "
+#         f"sslrootcert={cert_path}"
+#     )
 #     return conn
+
+#db connection for local host
+def get_db_connection():
+    conn = psycopg2.connect("postgresql://akmalali59855_gmail_:J-3IiGnvZtnFfRZ1CVKh_g@stream-strider-4060.7s5.aws-ap-south-1.cockroachlabs.cloud:26257/defaultdb?sslmode=verify-full")
+    # print("DATABASE_URL: ", os.environ["DATABASE_URL"])
+    return conn
 
 # Initialize database
 def init_db():
@@ -172,7 +172,7 @@ def login():
                         'name': row[2],
                         'email': row[3]
                     }
-                users.append(user)
+                    users.append(user)
 
                 cursor.close()
                 connection.close()
@@ -418,8 +418,8 @@ def video(image_folder='selected-images', audio_folder='selected-audio'):
     video_path = os.path.join(video_folder, video_filename)
 
     # Get list of image files from image_folder
-    image_files = [os.path.join(image_folder, file) for file in os.listdir(image_folder) if file.endswith(('.jpg', '.png', '.jpeg'))]
-
+    image_files = sorted([os.path.join(image_folder, file) for file in os.listdir(image_folder) if file.endswith(('.jpg', '.png', '.jpeg'))])
+    # print(image_files)
     # List to hold video clips for each image
     video_clips = []
 
