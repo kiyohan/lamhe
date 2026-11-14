@@ -23,7 +23,7 @@ nox==2022.11.21
 numpy==1.26.4
 opencv-python==4.9.0.80
 packaging==24.0
-pillow==10.2.0
+pillow
 platformdirs==4.2.0
 proglog==0.1.10
 psycopg2-binary==2.9.9
